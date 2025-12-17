@@ -208,16 +208,32 @@ class CookiePhysics {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d'); // Direct canvas context for rendering
+        // High-DPI support for crisper rendering on mobile/retina
+        this.dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+        // Logical render size in CSS pixels
+        this.renderWidth = canvas.clientWidth;
+        this.renderHeight = canvas.clientHeight;
+        // Set internal canvas resolution to match device pixel ratio
+        this.canvas.width = Math.floor(this.renderWidth * this.dpr);
+        this.canvas.height = Math.floor(this.renderHeight * this.dpr);
+        // Scale drawing to CSS pixel coordinates
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        // Prefer high quality smoothing for images
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
         this.engine = Matter.Engine.create();
         this.world = this.engine.world;
         this.cookieBodies = new Map(); // Track cookie URL -> body mapping
         this.cookieImages = new Map(); // Cache loaded images
 
+        // Determine cookie size factor based on viewport (mobile vs desktop)
+        this.sizeFactor = (typeof window !== 'undefined' && window.innerWidth < 768) ? 0.32 : 0.16;
+
         // Create boundaries (invisible walls)
         const wallOptions = { isStatic: true };
-        const ground = Matter.Bodies.rectangle(canvas.width / 2, canvas.height, canvas.width, 20, wallOptions);
-        const leftWall = Matter.Bodies.rectangle(0, canvas.height / 2, 20, canvas.height, wallOptions);
-        const rightWall = Matter.Bodies.rectangle(canvas.width, canvas.height / 2, 20, canvas.height, wallOptions);
+        const ground = Matter.Bodies.rectangle(this.renderWidth / 2, this.renderHeight, this.renderWidth, 20, wallOptions);
+        const leftWall = Matter.Bodies.rectangle(0, this.renderHeight / 2, 20, this.renderHeight, wallOptions);
+        const rightWall = Matter.Bodies.rectangle(this.renderWidth, this.renderHeight / 2, 20, this.renderHeight, wallOptions);
         
         Matter.World.add(this.world, [ground, leftWall, rightWall]);
 
@@ -295,9 +311,9 @@ class CookiePhysics {
         // Check if already added
         if (this.cookieBodies.has(imageUrl)) return;
 
-        // Cookie size is 10% of canvas width (responsive)
-        const size = this.canvas.width * 0.16;
-        const x = Math.random() * (this.canvas.width - size * 2) + size;
+        // Cookie size factor (responsive): based on CSS render width
+        const size = this.renderWidth * this.sizeFactor;
+        const x = Math.random() * (this.renderWidth - size * 2) + size;
         const y = -size; // Start above canvas
 
         // Create gingerbread person star shape (approximation)
@@ -346,8 +362,8 @@ class CookiePhysics {
     }
 
     animate() {
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Clear canvas (use logical render size in CSS pixels)
+        this.ctx.clearRect(0, 0, this.renderWidth, this.renderHeight);
 
         // Render all cookie bodies and check boundaries
         const bodies = Matter.Composite.allBodies(this.world);
@@ -359,12 +375,13 @@ class CookiePhysics {
             const margin = radius * 2; // Safety margin
 
             // Check if cookie is outside viewport and return it
-            if (pos.x < -margin || pos.x > this.canvas.width + margin || 
-                pos.y < -margin || pos.y > this.canvas.height + margin) {
-                // Reset position to center top
-                const centerX = this.canvas.width / 2;
+            if (pos.x < -margin || pos.x > this.renderWidth + margin || 
+                pos.y < -margin || pos.y > this.renderHeight + margin) {
+                // Reset position to a random X at top
+                const marginX = body.size;
+                const randomX = Math.random() * (this.renderWidth - marginX * 2) + marginX;
                 const newY = -radius * 2;
-                Matter.Body.setPosition(body, { x: centerX, y: newY });
+                Matter.Body.setPosition(body, { x: randomX, y: newY });
                 Matter.Body.setVelocity(body, { x: 0, y: 0 });
                 Matter.Body.setAngularVelocity(body, 0);
             }
@@ -417,8 +434,16 @@ class CookiePhysics {
     }
 
     resize(width, height) {
-        this.canvas.width = width;
-        this.canvas.height = height;
+        // Update logical render size (CSS pixels)
+        this.renderWidth = width;
+        this.renderHeight = height;
+        // Update internal resolution for current DPR
+        this.dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+        this.canvas.width = Math.floor(this.renderWidth * this.dpr);
+        this.canvas.height = Math.floor(this.renderHeight * this.dpr);
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
     }
 
     destroy() {
@@ -585,13 +610,17 @@ createApp({
         // Always show physics gallery in natural scroll layout
         const showPhysicsGallery = computed(() => true);
         
-        // Dynamic physics height - 50vh
-        const physicsHeight = computed(() => {
+        // Reactive viewport width for mobile/desktop adjustments
+        const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024);
+        const updateViewportWidth = () => {
             if (typeof window !== 'undefined') {
-                //return `${window.innerHeight * 0.5}px`;
-                return '600px';
+                viewportWidth.value = window.innerWidth;
             }
-            return '600px';
+        };
+
+        // Physics area height: mobile 400px, desktop 600px
+        const physicsHeight = computed(() => {
+            return viewportWidth.value < 768 ? '400px' : '600px';
         });
         
         // Removed showGalletizate ref as it's not used in template anymore (style binding used)
@@ -791,6 +820,16 @@ createApp({
             // Initial render
             window.scrollTo(0, 0); // Ensure at top
             updateScroll(0);
+
+            // Track viewport width changes
+            window.addEventListener('resize', updateViewportWidth);
+            updateViewportWidth();
+        });
+
+        onUnmounted(() => {
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('resize', updateViewportWidth);
+            }
         });
 
         return {
