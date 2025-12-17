@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    background-color: #08203f;
+    font-family: 'Muli', sans-serif;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    color: white;
+}
+
+body.no-scroll, html.no-scroll {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
+#snow-canvas, #fireworks-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10; /* Clean layering */
+}
+
+/* Postal 3D Container */
+.postal-scene {
+    perspective: 1000px;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.postal-card {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: 8px;
+    overflow: hidden;
+    -webkit-mask-image: -webkit-radial-gradient(white, black); 
+    pointer-events: auto;
+    /* 3D Properties */
+    backface-visibility: hidden;
+    transform: rotateY(180deg); /* Starts flipped away */
+}
+
+canvas.sequence-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    display: block;
+}
+
+/* Flip Wrapper */
+.flip-wrapper {
+    position: relative;
+    width: 90vw;
+    /* Prevent it from getting too huge or exploding */
+    max-width: 650px; 
+    max-height: 80vh; /* Safety constraint */
+    aspect-ratio: 14/16;
+    transform-style: preserve-3d;
+    transition: transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
+
+.flip-wrapper.is-flipped {
+    transform: rotateY(180deg);
+}
+
+/* Loader Card (Front) */
+.loader-card {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: rgba(8, 32, 63, 0.65); /* Semi-transparent */
+    backdrop-filter: blur(12px); /* Blur effect */
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backface-visibility: hidden;
+    z-index: 2;
+    transform: rotateY(0deg);
+    pointer-events: auto;
+}
+
+.start-btn {
+    transition: transform 0.2s;
+}
+.start-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Scroll Hint */
+.scroll-hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+    z-index: 40;
+    transition: opacity 0.5s;
+    pointer-events: none;
+}
+
+.mouse-icon {
+    width: 30px;
+    height: 50px;
+    border: 2px solid white;
+    border-radius: 15px;
+    position: relative;
+}
+
+.wheel {
+    width: 4px;
+    height: 8px;
+    background: white;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px;
+    animation: scrollWheel 1.5s infinite;
+}
+
+@keyframes scrollWheel {
+    0% { top: 8px; opacity: 1; }
+    100% { top: 25px; opacity: 0; }
+}
+
+/* Galletízate Modal */
+#galletizate-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 60; /* Above everything */
+    background: rgba(8, 32, 63, 0.95); /* Slightly clearer base */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Transformation handled by JS now for scroll effect */
+    /* opacity: 0; <-- Removed */
+    /* pointer-events: none; <-- Handled by being off-screen */
+}
+
+.galletizate-content {
+    text-align: center;
+    color: white;
+    padding: 20px;
+    width: 100%;
+
+}
+
+
+.font-muli {
+    font-family: 'Muli', sans-serif;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    80% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pop-in {
+    animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.overlay-text {
+    position: absolute;
+    /* bottom: 20%; Removed to allow inline positioning */
+    left: 0;
+    width: 100%;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+    padding: 0 20px;
+    font-family: 'Open Sans Condensed', sans-serif;
+    font-size: 1.5rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+
+.overlay-logo {
+    position: absolute;
+    top: 0%; /* Top of card */
+    left: 0%;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    width: 100%;
+    padding: 10%;
+    background-image: linear-gradient(to bottom, rgba(255,255,255,0.2), rgba(255,255,255,0.5), rgba(255,255,255,0))
+}
+
+/* Helper to make the page really tall for scrolling */
+.scroll-track {
+    height: 4000px; /* Fixed height for postal animation section */
+    position: absolute; /* Reserve space without pushing sticky out of view */
+    top: 0;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+}
+
+/* Postal scene container - only sticky during scroll track */
+.postal-container {
+    position: relative;
+    height: 4000px;
+    z-index: 10;
+}
+
+/* Whole container wraps postal + galletizate */
+.whole-container {
+    position: relative;
+}
+
+/* Ensure galletizate layers above postal near handoff */
+.galletizate-container {
+    position: relative; /* default stacking */
+}
+
+/* Physics canvas - interactive */
+canvas[style*="height"] {
+    display: block;
+    touch-action: manipulation;
+    user-select: none;
+}
