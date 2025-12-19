@@ -629,7 +629,44 @@ createApp({
              fileInput.value.click();
         };
 
-        const handleFileUpload = (event) => {
+        // Compress image to max 800px and reduce quality for web
+        const compressImage = (dataUrl) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Calculate scaled dimensions (max 800px, maintain aspect ratio)
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 800;
+                    
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height = Math.round((height * maxSize) / width);
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width = Math.round((width * maxSize) / height);
+                            height = maxSize;
+                        }
+                    }
+                    
+                    // Create canvas and draw scaled image
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to JPEG with 75% quality for web optimization
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+                    resolve(compressedDataUrl);
+                };
+                img.src = dataUrl;
+            });
+        };
+
+        const handleFileUpload = async (event) => {
             const file = event.target.files[0];
             if (!file) return;
             if (!file.type.match('image.*')) {
@@ -637,8 +674,10 @@ createApp({
                 return;
             }
             const reader = new FileReader();
-            reader.onload = (e) => {
-                userPhoto.value = e.target.result; 
+            reader.onload = async (e) => {
+                // Compress image before setting it
+                const compressed = await compressImage(e.target.result);
+                userPhoto.value = compressed;
             };
             reader.readAsDataURL(file);
         };
