@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Originales - Galletízate</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1b33;
+      color: #e8f1ff;
+    }
+    header {
+      padding: 16px 20px;
+      background: linear-gradient(90deg, #0e274d, #12406d);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.5px;
+    }
+    main {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .status {
+      margin: 12px 0 8px;
+      font-size: 14px;
+      color: #9cc7ff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: #10233f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    }
+    .card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      background: #0b1b33;
+    }
+    .card footer {
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #cddcf1;
+      word-break: break-all;
+    }
+    .empty {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #cddcf1;
+    }
+    .error {
+      color: #ffb3b3;
+    }
+    .loading {
+      color: #9cc7ff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Originales - Galletízate</h1>
+  </header>
+  <main>
+    <div class="status" id="status">Cargando...</div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none;">No hay imágenes para mostrar.</div>
+  </main>
+
+  <script>
+    const endpoint = 'https://galletizate.ealbinu.workers.dev/originals';
+    const grid = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+    const emptyEl = document.getElementById('empty');
+
+    async function loadOriginals() {
+      try {
+        statusEl.textContent = 'Cargando...';
+        emptyEl.style.display = 'none';
+        const res = await fetch(endpoint, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Error al obtener imágenes');
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          grid.innerHTML = '';
+          emptyEl.style.display = 'block';
+          statusEl.textContent = '0 imágenes';
+          return;
+        }
+        renderGrid(data);
+        statusEl.textContent = `${data.length} imágenes`;
+      } catch (err) {
+        console.error(err);
+        statusEl.innerHTML = `<span class="error">Error cargando imágenes. Reintenta más tarde.</span>`;
+      }
+    }
+
+    function renderGrid(items) {
+      grid.innerHTML = '';
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.alt = item.key || 'Imagen original';
+        const footer = document.createElement('footer');
+        footer.textContent = item.key || 'sin nombre';
+        card.appendChild(img);
+        card.appendChild(footer);
+        grid.appendChild(card);
+      });
+    }
+
+    loadOriginals();
+  </script>
+</body>
+</html>
